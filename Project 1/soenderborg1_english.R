@@ -105,15 +105,20 @@ boxplot(Dsel[ ,c("Q1","Q2","Q3","Q4")],
 ###########################################################################
 ## Summary statistics for daily heat consumptions
 
-## Total number of observations for House 1 during Jan-Feb 2010
-## (doesn't include missing values if there are any)
-sum(!is.na(Dsel$Q1))
-## Sample mean of daily heat consumption for House 1, Jan-Feb 2010
-mean(Dsel$Q1, na.rm=TRUE)
-## Sample variance of daily heat consumption for House 1, Jan-Feb 2010
-var(Dsel$Q1, na.rm=TRUE)
-## etc.
-##
+## We use the code from Remark 2.2
+selected <- c("Q1","Q2","Q3","Q4")
+apply(Dsel[, selected], 2, function(x) {
+  c(
+    sum=sum(!is.na(x)),                     ## Total number of observations (doesn't include missing values if there are any)
+    mean=mean(x, na.rm=TRUE),               ## Sample mean of daily heat consumption
+    var=var(x, na.rm=TRUE),                 ## Sample variance of daily heat consumption
+    dev=sd(x, na.rm=TRUE),                  ## Sample standard deviance
+    lq=quantile(x, probs=0.25, na.rm=TRUE), ## Lower quartile, Q1
+    median=median(x, na.rm=TRUE),           ## Median, Q2 (could also have used "quantile(x, probs=0.5, na.rm=TRUE)")
+    hq=quantile(x, probs=0.75, na.rm=TRUE)  ## Upper quartile, Q3
+  )
+})
+
 ## The argument 'na.rm=TRUE' ensures that the statistic is
 ## computed even in cases where there are missing values.
 
