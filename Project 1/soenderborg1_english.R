@@ -54,6 +54,11 @@ summary(D)
 cat(sprintf("\nAnother summary:\n"))
 str(D)
 
+var(D$Q1, na.rm=TRUE)
+var(D$Q2, na.rm=TRUE)
+var(D$Q3, na.rm=TRUE)
+var(D$Q4, na.rm=TRUE)
+
 
 ###########################################################################
 ## Histogram (empirical density)
@@ -129,13 +134,32 @@ apply(Dsel[, selected], 2, function(x) {
 ## qq-plot of daily heat consumption (House 1)
 qqnorm(Dsel$Q1)
 qqline(Dsel$Q1)
+## qq-plot of daily heat consumption (House 2)
+qqnorm(Dsel$Q2)
+qqline(Dsel$Q2)
+## qq-plot of daily heat consumption (House 3)
+qqnorm(Dsel$Q3)
+qqline(Dsel$Q3)
+## qq-plot of daily heat consumption (House 4)
+qqnorm(Dsel$Q4)
+qqline(Dsel$Q4)
 
 
 ###########################################################################
 ## Confidence interval for the mean
 
-## CI for the mean daily heat consumption of House 1
+## CI for the mean daily heat consumption of House 1, manually
+n <- sum(!is.na(Dsel$Q1))
+conf_level <- 0.95
+a <- 1-conf_level
+t_0.975 <- qt(1-a/2, n-1)
+c(mean(Dsel$Q1, na.rm=TRUE)-t_0.975*(sd(Dsel$Q1, na.rm=TRUE)/sqrt(n)), mean(Dsel$Q1, na.rm=TRUE)+t_0.975*(sd(Dsel$Q1, na.rm=TRUE)/sqrt(n)))
+
+## CI for the mean daily heat consumption of House 1, with R
 t.test(Dsel$Q1, conf.level=0.95)$conf.int
+t.test(Dsel$Q2, conf.level=0.95)$conf.int ## and House 2
+t.test(Dsel$Q3, conf.level=0.95)$conf.int ## and House 3
+t.test(Dsel$Q4, conf.level=0.95)$conf.int ## and House 4
 
 
 ###########################################################################
