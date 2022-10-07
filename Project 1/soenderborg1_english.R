@@ -12,6 +12,8 @@
 if (!require("rstudioapi")) install.packages("rstudioapi")
 ## purrr is a dependency for RStudioAPI to get current directory
 if (!require("purrr")) install.packages("purrr")
+## We use MESS for Q-Q plots
+if (!require("MESS")) install.packages("MESS") && require("MESS")
 
 ###########################################################################
 ## Set the working directory
@@ -131,18 +133,19 @@ apply(Dsel[, selected], 2, function(x) {
 ###########################################################################
 ## qq-plot for model validation
 
+qqnorm.wally <- function(x, y, ...) { qqnorm(y, ...); qqline(y, ...)}
 ## qq-plot of daily heat consumption (House 1)
-qqnorm(Dsel$Q1)
-qqline(Dsel$Q1)
+fitQ1 <- lm(Dsel$Q1 ~ 1)
+wallyplot(fitQ1, FUN = qqnorm.wally, main = "", hide = FALSE) # Multiple (simulated) Q-Q Plots for House 1
 ## qq-plot of daily heat consumption (House 2)
-qqnorm(Dsel$Q2)
-qqline(Dsel$Q2)
+fitQ2 <- lm(Dsel$Q2 ~ 1)
+wallyplot(fitQ2, FUN = qqnorm.wally, main = "", hide = FALSE) # Multiple (simulated) Q-Q Plots for House 2
 ## qq-plot of daily heat consumption (House 3)
-qqnorm(Dsel$Q3)
-qqline(Dsel$Q3)
+fitQ3 <- lm(Dsel$Q3 ~ 1)
+wallyplot(fitQ3, FUN = qqnorm.wally, main = "", hide = FALSE) # Multiple (simulated) Q-Q Plots for House 3
 ## qq-plot of daily heat consumption (House 4)
-qqnorm(Dsel$Q4)
-qqline(Dsel$Q4)
+fitQ4 <- lm(Dsel$Q4 ~ 1)
+wallyplot(fitQ4, FUN = qqnorm.wally, main = "", hide = FALSE) # Multiple (simulated) Q-Q Plots for House 4
 
 
 ###########################################################################
@@ -165,6 +168,24 @@ t.test(Dsel$Q4, conf.level=0.95)$conf.int ## and House 4
 ###########################################################################
 ## One-sample t-test
 
+## Calculating t_obs manually
+t_obs <- (mean(Dsel$Q1, na.rm=TRUE)-2.38)/(sd(Dsel$Q1, na.rm=TRUE)/sqrt(55))
+
+## Test statistic distribution
+n <- sum(!is.na(Dsel$Q1))
+x <- seq(-4, 4, by = 0.01)
+y <- dt(x, df = n-1)
+t_0.975 <- qt(0.975, df = n-1)
+plot(x, y, type = "l", col = "black", ylab = "Density(x)", main = "Distribution of the test statistic (n-1 (54) degrees of freedom)")
+polygon(c(x[x>=t_0.975], max(x), t_0.975), c(y[x>=t_0.975], 0, 0), col="red")
+polygon(c(min(x), x[x<=-t_0.975], -t_0.975), c(y[x<=-t_0.975], 0, 0), col="red")
+text(2.0, 0.2,"Black: t(54)", col = "black")
+text(t_0.975, -0.01,"t0.975", col = "red")
+text(-t_0.975, -0.01,"-t0.975", col = "red")
+
+## p-value, manually
+p <- 2*(1-pt(abs(t_obs), df = n-1))
+
 ##  Testing hypothesis mu=2.38 for daily heat consumption 
 ## (House 1, Jan-Feb 2010)
 t.test(Dsel$Q1, mu=2.38)
@@ -172,6 +193,24 @@ t.test(Dsel$Q1, mu=2.38)
 
 ###########################################################################
 ## Welch t-test for comparing two (independent) samples
+
+## Calculating t_obs manually
+x1 <- Dsel$Q1
+n1 <- sum(!is.na(x1))
+mu1 <- mean(x1, na.rm=TRUE)
+s1 <- sd(x1, na.rm=TRUE)
+x2 <- Dsel$Q2
+n2 <- sum(!is.na(x2))
+mu2 <- mean(x2, na.rm=TRUE)
+s2 <- sd(x2, na.rm=TRUE)
+delta <- mu2 - mu1
+t_obs <- ((mu1-mu2)-delta)/sqrt((s1^2/n1)+(s2^2/n2))
+
+## Calculating v manually
+v <- (s1^2/n1 + s2^2/n2)^2 / (((s1^2/n1)^2)/(n1-1) + ((s2^2/n2)^2)/(n2-1))
+
+## p-value, manually
+p <- 2*(1-pt(abs(t_obs), df = v))
 
 ## Comparing the heat consumption of House 1 and 2
 t.test(Dsel$Q1, Dsel$Q2)
