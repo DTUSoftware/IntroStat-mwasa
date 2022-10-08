@@ -256,7 +256,7 @@ t_0.975 <- qt(0.975, df = v)
 
 ggplot(data.frame(x=x,y=y), aes(x=x, y=y)) +
   geom_line() +
-  annotate(geom="text", x=2.0, y=0.2, label="Black: t(54)", col="black") +
+  annotate(geom="text", x=2.0, y=0.2, label="Black: t(108.26)", col="black") +
   geom_polygon(data=data.frame(x=c(x[x>=t_0.975], max(x), t_0.975), y=c(y[x>=t_0.975], 0, 0)), aes(x=x, y=y), fill="red", alpha=0.75) +
   annotate(geom="text", x=t_0.975, y=-0.01, label="t_0.975", col="red") +
   geom_polygon(data=data.frame(x=c(min(x), x[x<=-t_0.975], -t_0.975), y=c(y[x<=-t_0.975], 0, 0)), aes(x=x, y=y), fill="red", alpha=0.75) +
