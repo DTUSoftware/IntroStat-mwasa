@@ -44,13 +44,80 @@ D <- read.table("soenderborg2_data.csv", sep = ";", header = TRUE)
 D$t <- as.Date(D$t, format = "%d/%m/%Y")
 
 # Choose data from 15 Oct 2009 to 15 Apr 2010 for the four houses
-D_model <- subset(D, ("2009-10-15" <= t & t < "2010-04-16") & 
-                  (houseId %in% c(3, 5, 10, 17)))
+D_model <- subset(D, ("2009-10-15" <= t & t < "2010-04-16") &
+  (houseId %in% c(3, 5, 10, 17)))
 
 # Remove observations with missing values
 D_model <- na.omit(D_model)
 
+
 ###########################################################################
+## Short descriptive analysis and summary of the data
+
+variables <- c("Q", "Ta", "G")
+
+# Scatterplots
+ggplot(D_model, aes(x = Q, y = Ta)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) + # Regression line, without confidence interfal
+  geom_smooth(linetype = "dashed") +     # Loess method
+  labs(x = "Heat Consumption (Q) [kW]", y = "Outdoor Temperature (Ta) [Celsius]", title = "Scatter plot between the heat consumption (Q) and the outdoor temperature (Ta)")
+
+ggplot(D_model, aes(x = Q, y = G)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) + # Regression line, without confidence interfal
+  geom_smooth(linetype = "dashed") +     # Loess method
+  labs(x = "Heat Consumption (Q) [kW]", y = "Solar Irradiance (G) [W/m^2]", title = "Scatter plot between the heat consumption (Q) and the solar irradiance (G)")
+
+# Histograms
+ggplot(D_model, aes(Q)) +
+  geom_histogram(aes(y = ..density..), bins = 15) +
+  geom_density() +
+  labs(x = "Heat Consumption (Q) [kW]", y = "Density", title = "Histogram of empirical density of the heat consumption (Q)")
+
+ggplot(D_model, aes(Ta)) +
+  geom_histogram(aes(y = ..density..), bins = 15) +
+  geom_density() +
+  labs(x = "Outdoor Temperature (Ta) [Celsius]", y = "Density", title = "Histogram of empirical density of the outdoor temperature (Ta)")
+
+ggplot(D_model, aes(G)) +
+  geom_histogram(aes(y = ..density..), bins = 15) +
+  geom_density() +
+  labs(x = "Solar Irradiance (G) [W/m^2]", y = "Density", title = "Histogram of empirical density of the solar irradiance (G)")
+
+# Boxplots
+ggplot(melt(D_model[variables[1]], id.vars = NULL), aes(x = variable, y = value)) +
+  stat_boxplot(geom = 'errorbar') +
+  geom_boxplot() +
+  labs(x = "Variable", y = "Heat Consumption [kW]", title = "Box plot showing heat consumption")
+
+ggplot(melt(D_model[variables[2]], id.vars = NULL), aes(x = variable, y = value)) +
+  stat_boxplot(geom = 'errorbar') +
+  geom_boxplot() +
+  labs(x = "Variable", y = "Outdoor Temperature [Celsius]", title = "Box plot showing outdoor temperature")
+
+ggplot(melt(D_model[variables[3]], id.vars = NULL), aes(x = variable, y = value)) +
+  stat_boxplot(geom = 'errorbar') +
+  geom_boxplot() +
+  labs(x = "Variable", y = "Solar Irradiance [W/m^2]", title = "Box plot showing solar irradiance")
+
+# Summary Table
+Tbl <- apply(D_model[, variables], 2, function(x) {
+  c(
+    n = sum(!is.na(x)),                                   ## Total number of observations (doesn't include missing values if there are any)
+    mean = mean(x, na.rm = TRUE),                         ## Sample mean of daily heat consumption
+    var = var(x, na.rm = TRUE),                           ## Sample variance of daily heat consumption
+    sd = sd(x, na.rm = TRUE),                             ## Sample standard deviance
+    lq = unname(quantile(x, probs = 0.25, na.rm = TRUE)), ## Lower quartile, Q1
+    median = median(x, na.rm = TRUE),                     ## Median, Q2 (could also have used "quantile(x, probs=0.5, na.rm=TRUE)")
+    hq = unname(quantile(x, probs = 0.75, na.rm = TRUE))  ## Upper quartile, Q3
+  )
+})
+Tbl
+
+
+###########################################################################
+## Multiple Linear regression
 
 # Estimate multiple linear regression model
 fit <- lm(Q ~ Ta + G, data = D_model)
@@ -63,19 +130,19 @@ summary(fit)
 ## Plots for model validation
 
 # Observations against fitted values
-plot(fit$fitted.values, D_model$Q, xlab = "Fitted values",     
-       ylab = "Heat consumption")
+plot(fit$fitted.values, D_model$Q, xlab = "Fitted values",
+     ylab = "Heat consumption")
 
 # Residuals against each of the explanatory variables
-plot(D_model$EXPLANATORY_VARIABLE, fit$residuals, 
-        xlab = "INSERT TEXT", ylab = "Residuals")
+plot(D_model$EXPLANATORY_VARIABLE, fit$residuals,
+     xlab = "INSERT TEXT", ylab = "Residuals")
 
 # Residuals against fitted values
-plot(fit$fitted.values, fit$residuals, xlab = "Fitted values", 
+plot(fit$fitted.values, fit$residuals, xlab = "Fitted values",
      ylab = "Residuals")
 
 # Normal QQ-plot of the residuals
-qqnorm(fit$residuals, ylab = "Residuals", xlab = "Z-scores", 
+qqnorm(fit$residuals, ylab = "Residuals", xlab = "Z-scores",
        main = "")
 qqline(fit$residuals)
 
@@ -87,15 +154,14 @@ confint(fit, level = 0.95)
 
 
 # Make dataset for validation
-D_test <- subset(D, (t == "2008-12-06" & houseId == 3)|
-                          (t == "2009-02-22" & houseId == 5)|
-                          (t == "2009-03-12" & houseId == 10)|
-                          (t == "2009-04-01" & houseId == 17))
+D_test <- subset(D, (t == "2008-12-06" & houseId == 3) |
+  (t == "2009-02-22" & houseId == 5) |
+  (t == "2009-03-12" & houseId == 10) |
+  (t == "2009-04-01" & houseId == 17))
 
 # Predictions and 95% prediction intervals
-pred <- predict(FINAL_MODEL, newdata = D_test, 
+pred <- predict(FINAL_MODEL, newdata = D_test,
                 interval = "prediction", level = 0.95)
 
 # Observed values and predictions
 cbind(id = D_test$houseId, Q = D_test$Q, pred)
-
