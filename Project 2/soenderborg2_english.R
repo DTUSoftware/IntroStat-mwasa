@@ -89,17 +89,17 @@ ggplot(D_model, aes(G)) +
 ggplot(melt(D_model[variables[1]], id.vars = NULL), aes(x = variable, y = value)) +
   stat_boxplot(geom = 'errorbar') +
   geom_boxplot() +
-  labs(x = "Variable", y = "Heat Consumption [kW]", title = "Box plot showing heat consumption")
+  labs(x = "Variable", y = "Heat Consumption (Q) [kW]", title = "Box plot showing heat consumption")
 
 ggplot(melt(D_model[variables[2]], id.vars = NULL), aes(x = variable, y = value)) +
   stat_boxplot(geom = 'errorbar') +
   geom_boxplot() +
-  labs(x = "Variable", y = "Outdoor Temperature [Celsius]", title = "Box plot showing outdoor temperature")
+  labs(x = "Variable", y = "Outdoor Temperature (Ta) [Celsius]", title = "Box plot showing outdoor temperature")
 
 ggplot(melt(D_model[variables[3]], id.vars = NULL), aes(x = variable, y = value)) +
   stat_boxplot(geom = 'errorbar') +
   geom_boxplot() +
-  labs(x = "Variable", y = "Solar Irradiance [W/m^2]", title = "Box plot showing solar irradiance")
+  labs(x = "Variable", y = "Solar Irradiance (G) [W/m^2]", title = "Box plot showing solar irradiance")
 
 # Summary Table
 Tbl <- apply(D_model[, variables], 2, function(x) {
@@ -129,22 +129,40 @@ summary(fit)
 ###########################################################################
 ## Plots for model validation
 
+fit_df <- data.frame(fitted_values = fit$fitted.values, residuals = fit$residuals,
+                     Q = fit$model$Q, Ta = fit$model$Ta, G = fit$model$G)
+
 # Observations against fitted values
-plot(fit$fitted.values, D_model$Q, xlab = "Fitted values",
-     ylab = "Heat consumption")
+ggplot(fit_df, aes(x = fitted_values, y = Q)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) + # Regression line, without confidence interfal
+  geom_smooth(linetype = "dashed") +     # Loess method
+  labs(x = "Fitted values", y = "Heat Consumption (Q) [kW]", title = "Scatter plot for observations against fitted values")
 
 # Residuals against each of the explanatory variables
-plot(D_model$EXPLANATORY_VARIABLE, fit$residuals,
-     xlab = "INSERT TEXT", ylab = "Residuals")
+ggplot(fit_df, aes(x = Ta, y = residuals)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) + # Regression line, without confidence interfal
+  geom_smooth(linetype = "dashed") +     # Loess method
+  labs(x = "Outdoor Temperature (Ta) [Celsius]", y = "Residuals", title = "Scatter plot for residuals against outdoor temperature")
+
+ggplot(fit_df, aes(x = G, y = residuals)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) + # Regression line, without confidence interfal
+  geom_smooth(linetype = "dashed") +     # Loess method
+  labs(x = "Solar Irradiance (G) [W/m^2]", y = "Residuals", title = "Scatter plot for residuals against solar irradiance")
 
 # Residuals against fitted values
-plot(fit$fitted.values, fit$residuals, xlab = "Fitted values",
-     ylab = "Residuals")
+ggplot(fit_df, aes(x = fitted_values, y = residuals)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) + # Regression line, without confidence interfal
+  geom_smooth(linetype = "dashed") +     # Loess method
+  labs(x = "Fitted values", y = "Residuals", title = "Scatter plot for residuals against fitted values")
 
 # Normal QQ-plot of the residuals
-qqnorm(fit$residuals, ylab = "Residuals", xlab = "Z-scores",
-       main = "")
-qqline(fit$residuals)
+qqnorm.wally <- function(x, y, ...) { qqnorm(y, ...); qqline(y, ...) }
+## qq-plot of daily heat consumption (House 1)
+wallyplot(fit$residuals, FUN = qqnorm.wally, ylab = "Residuals", xlab = "Z-scores", main = "", hide = FALSE) # Multiple (simulated) Q-Q Plots for House 1
 
 
 ###########################################################################
