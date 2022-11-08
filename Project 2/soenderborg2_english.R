@@ -130,7 +130,7 @@ summary(fit)
 ## Plots for model validation
 
 D_fit <- data.frame(fitted_values = fit$fitted.values, residuals = fit$residuals,
-                     Q = fit$model$Q, Ta = fit$model$Ta, G = fit$model$G)
+                    Q = fit$model$Q, Ta = fit$model$Ta, G = fit$model$G)
 
 # Observations against fitted values
 ggplot(D_fit, aes(x = fitted_values, y = Q)) +
@@ -173,7 +173,7 @@ n <- length(D_fit$Q)
 beta_1 <- unname(fit$coefficients[2])
 conf_level <- 0.95
 a <- 1 - conf_level
-t_0.975 <- qt(1 - a / 2, n - (2e-16 + 1)) # didn't want to find out where to get this manually
+t_0.975 <- qt(1 - a / 2, n - (2 + 1))
 c(beta_1 - t_0.975 * 0.0058260, unname(fit$coefficients[2]) + t_0.975 * 0.0058260) # and this is also just manually put in
 
 # Confidence intervals for the model coefficients
@@ -183,7 +183,7 @@ confint(fit, level = 0.95)
 ## Hypothesis
 
 # test statistic
-t_obs <- (beta_1 - (-0.25))/0.0058260
+t_obs <- (beta_1 - (-0.25)) / 0.0058260
 
 ## Test statistic distribution
 x <- seq(-4, 4, by = 0.01)
@@ -191,15 +191,45 @@ y <- dt(x, df = n - 2)
 
 ggplot(data.frame(x = x, y = y), aes(x = x, y = y)) +
   geom_line() +
-  annotate(geom = "text", x = 2.0, y = 0.2, label = "Black: t(574)", col = "black") +
+  annotate(geom = "text", x = 2.0, y = 0.2, label = "Black: t(573)", col = "black") +
   geom_polygon(data = data.frame(x = c(x[x >= t_0.975], max(x), t_0.975), y = c(y[x >= t_0.975], 0, 0)), aes(x = x, y = y), fill = "red", alpha = 0.75) +
   annotate(geom = "text", x = t_0.975, y = -0.01, label = "t_0.975", col = "red") +
   geom_polygon(data = data.frame(x = c(min(x), x[x <= -t_0.975], -t_0.975), y = c(y[x <= -t_0.975], 0, 0)), aes(x = x, y = y), fill = "red", alpha = 0.75) +
   annotate(geom = "text", x = -t_0.975, y = -0.01, label = "-t_0.975", col = "red") +
-  labs(y = "Density(x)", title = "Distribution of the test statistic (n-2 (574) degrees of freedom)")
+  labs(y = "Density(x)", title = "Distribution of the test statistic (n-(p+1) (573) degrees of freedom)")
 
 
 ###########################################################################
+## Backward selection
+
+summary(fit)
+ggplot(data.frame(fitted_values = fit$fitted.values, Q = fit$model$Q), aes(x = fitted_values, y = Q)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) + # Regression line, without confidence interfal
+  geom_smooth(linetype = "dashed") +     # Loess method
+  labs(x = "Fitted values", y = "Heat Consumption (Q) [kW]", title = "Observations against fitted values (Q ~ Ta + G)")
+
+
+fit2 <- lm(Q ~ Ta, data = D_model)
+summary(fit2)
+ggplot(data.frame(fitted_values = fit2$fitted.values, Q = fit2$model$Q), aes(x = fitted_values, y = Q)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) + # Regression line, without confidence interfal
+  geom_smooth(linetype = "dashed") +     # Loess method
+  labs(x = "Fitted values", y = "Heat Consumption (Q) [kW]", title = "Observations against fitted values (Q ~ Ta)")
+
+
+fit3 <- lm(Q ~ G, data = D_model)
+summary(fit3)
+ggplot(data.frame(fitted_values = fit3$fitted.values, Q = fit3$model$Q), aes(x = fitted_values, y = Q)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) + # Regression line, without confidence interfal
+  geom_smooth(linetype = "dashed") +     # Loess method
+  labs(x = "Fitted values", y = "Heat Consumption (Q) [kW]", title = "Observations against fitted values (Q ~ G)")
+
+
+###########################################################################
+## Validation of the final model
 
 # Make dataset for validation
 D_test <- subset(D, (t == "2008-12-06" & houseId == 3) |
@@ -208,8 +238,18 @@ D_test <- subset(D, (t == "2008-12-06" & houseId == 3) |
   (t == "2009-04-01" & houseId == 17))
 
 # Predictions and 95% prediction intervals
-pred <- predict(FINAL_MODEL, newdata = D_test,
+pred <- predict(fit, newdata = D_test,
                 interval = "prediction", level = 0.95)
 
 # Observed values and predictions
-cbind(id = D_test$houseId, Q = D_test$Q, pred)
+cbind(houseId = D_test$houseId, Q = D_test$Q, pred)
+
+# Compare predictions to observed heat consumption of the validation set
+n <- length(D_test$houseId)
+sum <- 0
+for (i in 1 : n) {
+  # print(abs(pred[i]-D_test$Q[i]))
+  sum <- sum + abs(pred[i]-D_test$Q[i])
+}
+avg <- sum/n
+avg
