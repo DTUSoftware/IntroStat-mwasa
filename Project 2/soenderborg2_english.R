@@ -248,7 +248,7 @@ cbind(houseId = D_test$houseId, Q = D_test$Q, pred)
 n <- length(D_test$houseId)
 sum <- 0
 for (i in 1 : n) {
-  # print(abs(pred[i]-D_test$Q[i]))
+  print(pred[i]-D_test$Q[i])
   sum <- sum + abs(pred[i]-D_test$Q[i])
 }
 avg <- sum/n
